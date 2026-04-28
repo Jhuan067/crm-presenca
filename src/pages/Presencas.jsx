@@ -1,85 +1,89 @@
 import { useEffect, useState } from "react";
 import MainLayout from "../layouts/MainLayout";
-import api from "../services/api";
+import Table from "../components/Table";
+import { theme } from "../styles/theme";
+import { getErrorMessage } from "../services/api";
+import { getPresencas } from "../services/presencaService";
 
 export default function Presencas() {
   const [dados, setDados] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    async function fetchPresenca() {
+    async function loadPresencas() {
+      setLoading(true);
+      setError("");
+
       try {
-        const response = await api.get("/crm/presenca");
-        setDados(response.data);
+        const payload = await getPresencas();
+        setDados(Array.isArray(payload) ? payload : []);
       } catch (err) {
         console.log(err);
-        setErro("Erro ao carregar presença");
+        setDados([]);
+        setError(getErrorMessage(err, "Não foi possível carregar os registros de presença."));
       } finally {
         setLoading(false);
       }
     }
 
-    fetchPresenca();
+    loadPresencas();
   }, []);
 
   return (
     <MainLayout>
       <div style={styles.container}>
-        <h1 style={styles.title}>Controle de Presença</h1>
+        <div>
+          <h1 style={styles.title}>Presença</h1>
+          <p style={styles.subtitle}>
+            Regras visuais mantidas: tolerância de 30 minutos na entrada, na saída e jornada padrão de 8 horas.
+          </p>
+        </div>
 
         {loading && <p style={styles.info}>Carregando...</p>}
-        {erro && <p style={styles.error}>{erro}</p>}
+        {error && <p style={styles.error}>{error}</p>}
 
-        <div style={styles.tableContainer}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Nome</th>
-                <th style={styles.th}>Matrícula</th>
-                <th style={styles.th}>Entrada</th>
-                <th style={styles.th}>Saída</th>
-                <th style={styles.th}>Jornada</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {dados.length === 0 ? (
-                <tr>
-                  <td colSpan={5} style={styles.empty}>
-                    Nenhum registro encontrado
-                  </td>
-                </tr>
-              ) : (
-                dados.map((item, index) => {
-                  const status = getStatus(item);
-
-                  return (
-                    <tr
-                      key={index}
-                      style={{
-                        ...styles.tr,
-                        backgroundColor: status.cor,
-                      }}
-                    >
-                      <td style={styles.td}>{item.nome}</td>
-                      <td style={styles.td}>{item.matricula}</td>
-                      <td style={styles.td}>{item.entrada}</td>
-                      <td style={styles.td}>{item.saida}</td>
-                      <td style={styles.td}>{status.jornada}</td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+        <div style={styles.legend}>
+          <span style={{ ...styles.legendItem, backgroundColor: "#e0f2fe", color: "#0369a1" }}>
+            Azul: fora da tolerância
+          </span>
+          <span style={{ ...styles.legendItem, backgroundColor: "#fef9c3", color: "#854d0e" }}>
+            Amarelo: hora extra
+          </span>
+          <span style={{ ...styles.legendItem, backgroundColor: "#fee2e2", color: "#b91c1c" }}>
+            Vermelho: jornada incompleta
+          </span>
         </div>
+
+        <Table
+          columns={[
+            { key: "nome", title: "Nome" },
+            { key: "matricula", title: "Matrícula" },
+            { key: "entrada", title: "Entrada", render: (row) => row.entrada || "-" },
+            { key: "saida", title: "Saída", render: (row) => row.saida || "-" },
+            { key: "jornada", title: "Jornada", render: (row) => getStatus(row).jornada },
+            { key: "turno", title: "Turno",render: (row) => {const turno = row.turno;const label =
+              turno === "manha"
+              ? "🌅 Manhã"
+              : turno === "tarde"
+              ? "🌇 Tarde"
+              : turno === "noite"
+              ? "🌙 Noite"
+              : "-";
+              return label;
+  },
+},
+          ]}
+          data={dados}
+          emptyMessage="Nenhum dado encontrado"
+          rowKey="matricula"
+          getRowStyle={(row) => ({ backgroundColor: getStatus(row).cor })}
+        />
       </div>
     </MainLayout>
   );
 }
 
-/* 🔥 REGRA DE NEGÓCIO */
 function getStatus(item) {
   if (!item.entrada || !item.saida) {
     return { cor: "#ffffff", jornada: "-" };
@@ -87,96 +91,71 @@ function getStatus(item) {
 
   const entrada = toMin(item.entrada);
   const saida = toMin(item.saida);
-
   const jornadaMin = saida - entrada;
-  const jornadaHoras = (jornadaMin / 60).toFixed(1) + "h";
-
-  // horário esperado (exemplo: 08:00 → 480 min)
+  const jornadaHoras = `${(jornadaMin / 60).toFixed(1)}h`;
   const entradaPadrao = 480;
+  const saidaPadrao = entradaPadrao + 480;
   const tolerancia = 30;
 
-  const atraso = entrada > entradaPadrao + tolerancia;
-  const adiantado = entrada < entradaPadrao - tolerancia;
-
-  // regra de jornada (8h = 480 min)
   if (jornadaMin > 480) {
-    return { cor: "#fef9c3", jornada: jornadaHoras }; // amarelo (hora extra)
+    return { cor: "#fef9c3", jornada: jornadaHoras };
   }
 
   if (jornadaMin < 480) {
-    return { cor: "#fee2e2", jornada: jornadaHoras }; // vermelho suave (faltou hora)
+    return { cor: "#fee2e2", jornada: jornadaHoras };
   }
 
-  // fora da tolerância de entrada
-  if (atraso || adiantado) {
-    return { cor: "#e0f2fe", jornada: jornadaHoras }; // azul claro
+  if (
+    entrada > entradaPadrao + tolerancia ||
+    entrada < entradaPadrao - tolerancia ||
+    saida > saidaPadrao + tolerancia ||
+    saida < saidaPadrao - tolerancia
+  ) {
+    return { cor: "#e0f2fe", jornada: jornadaHoras };
   }
 
   return { cor: "#ffffff", jornada: jornadaHoras };
 }
 
-/* ⏱️ converte HH:mm → minutos */
 function toMin(hora) {
-  const [h, m] = hora.split(":").map(Number);
+  const [h, m] = String(hora).split(":").map(Number);
   return h * 60 + m;
 }
 
-/* 🎨 ESTILO */
 const styles = {
   container: {
     display: "flex",
     flexDirection: "column",
     gap: "20px",
   },
-
   title: {
-    fontSize: "22px",
-    fontWeight: "600",
-    color: "#0f172a",
+    margin: 0,
+    fontSize: "28px",
+    fontWeight: 700,
+    color: theme.colors.textPrimary,
   },
-
+  subtitle: {
+    margin: "8px 0 0",
+    color: theme.colors.textSecondary,
+    fontSize: "14px",
+  },
   info: {
-    color: "#64748b",
+    margin: 0,
+    color: theme.colors.textSecondary,
   },
-
   error: {
-    color: "#ef4444",
+    margin: 0,
+    color: theme.colors.danger,
   },
-
-  tableContainer: {
-    backgroundColor: "#ffffff",
-    borderRadius: "12px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-    overflow: "hidden",
+  legend: {
+    display: "flex",
+    gap: "10px",
+    flexWrap: "wrap",
   },
-
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-  },
-
-  th: {
-    textAlign: "left",
-    padding: "14px",
-    backgroundColor: "#f1f5f9",
-    fontSize: "14px",
-    color: "#334155",
-  },
-
-  td: {
-    padding: "14px",
-    borderTop: "1px solid #e2e8f0",
-    fontSize: "14px",
-    color: "#0f172a",
-  },
-
-  tr: {
-    transition: "0.2s",
-  },
-
-  empty: {
-    textAlign: "center",
-    padding: "20px",
-    color: "#94a3b8",
+  legendItem: {
+    padding: "8px 12px",
+    borderRadius: "999px",
+    fontSize: "12px",
+    fontWeight: 600,
   },
 };
