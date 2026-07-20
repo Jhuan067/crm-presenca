@@ -1,16 +1,61 @@
-# React + Vite
+# Registro Presença CRM
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Painel administrativo desenvolvido para acompanhar e gerenciar os registros de ponto realizados através do aplicativo **Registro Presença**.
 
-Currently, two official plugins are available:
+O sistema permite administrar colaboradores, consultar registros de entrada e saída e visualizar as informações enviadas pelo aplicativo em uma interface simples e organizada.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Preview
 
-## React Compiler
+### Monitoramento
+![Dashboard](https://github.com/user-attachments/assets/66c9c6d7-0fe0-4a24-9fb0-8de3a2e09bd1)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Localização exata
+![Usuários](https://github.com/user-attachments/assets/1d0a0d08-4b5a-41fc-876b-9f9c391a4b3c)
 
-## Expanding the ESLint configuration
+### Registros
+![Registros](https://github.com/user-attachments/assets/ecd2fb21-c088-48da-9503-5cf8f55216e6)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Funcionalidades
+
+- Login com autenticação
+- Dashboard com visão geral do sistema
+- Cadastro e gerenciamento de usuários
+- Consulta de registros de ponto
+- Visualização de fotos registradas pelo aplicativo
+- Visualização da localização dos registros
+- Busca e filtros
+- Integração com a API
+
+## Tecnologias
+
+- React
+- Vite
+- Tailwind CSS
+- React Router
+- Axios
+- JavaScript
+
+## Estrutura
+
+```text
+src/
+├── components
+├── pages
+├── services
+├── contexts
+├── hooks
+├── routes
+└── assets
+```
+
+## Ecossistema
+
+Este projeto faz parte do sistema **Registro Presença**.
+
+- 📱 Mobile App (React Native)
+- ⚙️ API (Node.js + Express)
+- 💻 CRM (React)
+
+## Objetivo
+
+Essa foi mais uma das etapas do escalonamento do projeto Registro-Presença. Onde decidi criar um CRM prático para monitorar as situações, alinhando com o App de Registro
